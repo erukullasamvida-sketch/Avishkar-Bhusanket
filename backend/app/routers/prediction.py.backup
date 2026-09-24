@@ -1,0 +1,22 @@
+from fastapi import APIRouter
+
+from ..schemas.prediction import PredictionRequest
+from ..ml.predict import predict_risk
+
+
+router = APIRouter(
+    prefix="/api/predictions",
+    tags=["AI Prediction"]
+)
+
+
+@router.post("")
+def create_prediction(
+    data: PredictionRequest
+):
+
+    result = predict_risk(
+        data.model_dump()
+    )
+
+    return result

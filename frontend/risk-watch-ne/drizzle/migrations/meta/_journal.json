@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789060081362,
+      "tag": "0000_landslideguard_schema_and_seed",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789060115817,
+      "tag": "0001_field_reports_storage_policies",
+      "breakpoints": true
+    }
+  ]
+}

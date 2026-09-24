@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# SQLite database
+*.db
+*.db-wal
+*.db-shm
+
+# Environment files
+.env
+.env.*
+
+# Frontend dependencies
+node_modules/
+
+# Build/output
+dist/
+.output/
+.wrangler/
+.tanstack/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
