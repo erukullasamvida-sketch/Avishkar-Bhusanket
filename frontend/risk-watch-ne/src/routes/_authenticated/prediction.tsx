@@ -1,12 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { Info, Loader2, Play, RotateCcw } from "lucide-react";
 
 import { AppShell, SectionCard } from "@/components/app-shell";
 import { RiskBadge } from "@/components/risk-badge";
 import { Button } from "@/components/ui/button";
+import { useDemoMode } from "@/hooks/use-demo-mode";
 import { useLocationSelection } from "@/hooks/use-location-selection";
 import { getPrediction } from "@/lib/api/prediction";
 import { useProfile } from "@/hooks/use-profile";
@@ -43,9 +42,14 @@ function toRiskLevel(value: string): RiskLevel {
 function PredictionPage() {
   const { data: profile } = useProfile();
   const { selectedLocationId, selectedLocation } = useLocationSelection();
-  const [demoActive, setDemoActive] = useState(false);
-  const [demoLevel, setDemoLevel] = useState<RiskLevel | null>(null);
-  const [demoAlertTriggered, setDemoAlertTriggered] = useState(false);
+  const {
+    demoActive,
+    demoLevel,
+    demoAlertTriggered,
+    startDemo: startDemoMode,
+    stopDemo: stopDemoMode,
+    resetDemo: resetDemoMode,
+  } = useDemoMode();
   const { data: prediction, isFetching, error, refetch } = useQuery({
     queryKey: ["prediction", selectedLocationId],
     queryFn: () => {
@@ -57,27 +61,6 @@ function PredictionPage() {
     enabled: false,
   });
 
-  useEffect(() => {
-    if (!demoActive) return;
-
-    setDemoLevel("moderate");
-    setDemoAlertTriggered(false);
-    const highTimer = window.setTimeout(() => setDemoLevel("high"), 3000);
-    const criticalTimer = window.setTimeout(() => setDemoLevel("critical"), 6000);
-    const alertTimer = window.setTimeout(() => {
-      setDemoAlertTriggered(true);
-      toast.error("Demo alert triggered", {
-        description: `${selectedLocation?.name ?? "Selected location"} reached Critical risk.`,
-      });
-    }, 6500);
-
-    return () => {
-      window.clearTimeout(highTimer);
-      window.clearTimeout(criticalTimer);
-      window.clearTimeout(alertTimer);
-    };
-  }, [demoActive, selectedLocation?.name]);
-
   function runAnalysis() {
     if (selectedLocationId === null) return;
     void refetch();
@@ -85,15 +68,15 @@ function PredictionPage() {
 
   function startDemo() {
     if (selectedLocationId === null) return;
-    setDemoLevel("moderate");
-    setDemoAlertTriggered(false);
-    setDemoActive(true);
+    startDemoMode(selectedLocation?.name);
+  }
+
+  function stopDemo() {
+    stopDemoMode();
   }
 
   function resetDemo() {
-    setDemoActive(false);
-    setDemoLevel(null);
-    setDemoAlertTriggered(false);
+    resetDemoMode();
   }
 
   return (
@@ -122,6 +105,7 @@ function PredictionPage() {
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide">
               {(["moderate", "high", "critical"] as RiskLevel[]).map((level, index) => (
                 <span key={level} className="flex items-center gap-2">
+                  <span className={demoLevel === level ? "text-foreground" : "text-muted-foreground"}>{level.toUpperCase()}</span>
                   <RiskBadge level={level} className={demoLevel === level ? "ring-2 ring-primary/30" : "opacity-50"} />
                   {index < 2 && <span className="text-muted-foreground">→</span>}
                 </span>
@@ -133,14 +117,19 @@ function PredictionPage() {
             </div>
           </div>
           {demoActive ? (
-            <Button variant="outline" onClick={resetDemo}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset Demo
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={stopDemo}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Stop Demo
+              </Button>
+              <Button variant="ghost" onClick={resetDemo}>
+                Reset
+              </Button>
+            </div>
           ) : (
             <Button onClick={startDemo} disabled={selectedLocationId === null}>
               <Play className="mr-2 h-4 w-4" />
-              Start Demo Mode
+              Start Demo
             </Button>
           )}
         </div>

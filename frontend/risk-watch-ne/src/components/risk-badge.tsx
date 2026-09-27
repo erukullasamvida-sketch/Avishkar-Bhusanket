@@ -12,6 +12,23 @@ export function RiskBadge({
   className?: string;
   showScore?: boolean;
 }) {
+  const hasScore = score !== undefined && Number.isFinite(score);
+  const hasLevel = level !== undefined;
+
+  if (!hasScore && !hasLevel) {
+    return (
+      <span
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground",
+          className,
+        )}
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+        Data unavailable
+      </span>
+    );
+  }
+
   const lvl = level ?? riskLevel(score ?? 0);
   return (
     <span
@@ -23,7 +40,7 @@ export function RiskBadge({
     >
       <span className={cn("h-1.5 w-1.5 rounded-full", riskDotClass[lvl])} />
       {riskLabel[lvl]}
-      {showScore && score !== undefined ? ` ${(score * 100).toFixed(1)}%` : ""}
+      {showScore && hasScore ? ` ${(score * 100).toFixed(1)}%` : ""}
     </span>
   );
 }

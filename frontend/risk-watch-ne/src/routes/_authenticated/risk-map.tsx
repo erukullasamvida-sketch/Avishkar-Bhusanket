@@ -9,6 +9,7 @@ import { RiskBadge } from "@/components/risk-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useDemoMode } from "@/hooks/use-demo-mode";
 import {
   Select,
   SelectContent,
@@ -57,6 +58,7 @@ const LAYER_LABELS: [keyof MapLayers, string][] = [
 function RiskMapPage() {
   const { data: profile } = useProfile();
   const { selectedLocationId } = useLocationSelection();
+  const { demoActive, demoLevel, demoAlertTriggered } = useDemoMode();
   const { data: backendLocations = [] } = useQuery({
     queryKey: ["risk_backend_locations"],
     queryFn: () => getLocations(),
@@ -68,10 +70,11 @@ function RiskMapPage() {
       const liveLocations = await Promise.all(
         locations.map(async (location) => {
           const risk = await getRiskZone(location.id);
+          const hasRiskRecord = Boolean(risk.risk_record);
           return {
             ...location,
-            risk_score: risk.risk_record?.probability ?? 0,
-            risk_level: risk.risk_record?.risk_level ?? "Low",
+            risk_score: hasRiskRecord ? risk.risk_record!.probability : null,
+            risk_level: hasRiskRecord ? risk.risk_record!.risk_level : "Data unavailable",
             district: location.district,
             state: location.district,
           };
@@ -89,7 +92,7 @@ function RiskMapPage() {
         ndvi: number;
         historical_events: number;
         monitored: boolean;
-        risk_score: number;
+        risk_score: number | null;
         risk_level: string;
       }>;
     },
@@ -112,10 +115,40 @@ function RiskMapPage() {
     [backendLocations],
   );
 
-  const filtered = locations.filter((l) => {
+  const demoRiskScoreByLevel = {
+    low: 24,
+    moderate: 45,
+    high: 68,
+    critical: 94,
+  } as const;
+
+  const selectedDemoLevel =
+    demoActive && selectedLocationId !== null
+      ? (demoAlertTriggered ? "critical" : demoLevel ?? "moderate")
+      : null;
+
+  const displayLocations = useMemo(() => {
+    if (selectedDemoLevel === null) return locations;
+
+    return locations.map((location) => {
+      if (location.id !== selectedLocationId) {
+        return location;
+      }
+
+      return {
+        ...location,
+        risk_level: selectedDemoLevel,
+        risk_score: demoRiskScoreByLevel[selectedDemoLevel],
+      };
+    });
+  }, [demoRiskScoreByLevel, locations, selectedDemoLevel, selectedLocationId]);
+
+  const filtered = displayLocations.filter((l) => {
     const matchesSearch = !search || l.name.toLowerCase().includes(search.toLowerCase());
     const matchesDistrict = district === "all" || l.district === district;
-    const matchesLevel = level === "all" || riskLevelFromBackend(l.risk_level) === level;
+    const hasRiskData = l.risk_score !== null && l.risk_score !== undefined;
+    const matchesLevel =
+      level === "all" || (hasRiskData && riskLevelFromBackend(l.risk_level) === level);
     return matchesSearch && matchesDistrict && matchesLevel;
   });
 
@@ -170,7 +203,15 @@ function RiskMapPage() {
             {filtered.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">No live locations match the current filters.</p>
             ) : (
-              <MapPanel locations={filtered} layers={layers} height={520} />
+              <MapPanel
+                locations={filtered}
+                layers={layers}
+                height={520}
+                demoActive={demoActive}
+                selectedLocationId={selectedLocationId}
+                demoLevel={demoLevel}
+                demoAlertTriggered={demoAlertTriggered}
+              />
             )}
           </SectionCard>
         </div>
@@ -213,29 +254,45 @@ function RiskMapPage() {
 
           <SectionCard title="Locations">
             <ul className="max-h-80 space-y-2 overflow-y-auto">
-              {filtered.map((loc) => (
-                <li key={loc.id}>
-                  <Link
-                    to="/risk/$id"
-                    params={{ id: String(loc.id) }}
-                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-border p-2.5 hover:bg-muted"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-foreground">
-                        {loc.name}
+              {filtered.map((loc) => {
+                const hasRiskData = loc.risk_score !== null && loc.risk_score !== undefined;
+                const effectiveRiskLevel =
+                  demoActive && selectedLocationId === loc.id
+                    ? (demoAlertTriggered ? "critical" : demoLevel ?? "moderate")
+                    : hasRiskData
+                      ? riskLevelFromBackend(loc.risk_level)
+                      : undefined;
+                const effectiveRiskScore =
+                  demoActive && selectedLocationId === loc.id
+                    ? demoRiskScoreByLevel[effectiveRiskLevel ?? "moderate"]
+                    : hasRiskData
+                      ? loc.risk_score
+                      : undefined;
+
+                return (
+                  <li key={loc.id}>
+                    <Link
+                      to="/risk/$id"
+                      params={{ id: String(loc.id) }}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-border p-2.5 hover:bg-muted"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {loc.name}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {loc.district}, {loc.state}
+                        </span>
                       </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {loc.district}, {loc.state}
-                      </span>
-                    </span>
-                    <RiskBadge
-                      level={riskLevelFromBackend(loc.risk_level)}
-                      score={loc.risk_score / 100}
-                      showScore
-                    />
-                  </Link>
-                </li>
-              ))}
+                      <RiskBadge
+                        level={effectiveRiskLevel}
+                        score={effectiveRiskScore !== undefined ? effectiveRiskScore / 100 : undefined}
+                        showScore={Boolean(effectiveRiskLevel)}
+                      />
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </SectionCard>
         </div>

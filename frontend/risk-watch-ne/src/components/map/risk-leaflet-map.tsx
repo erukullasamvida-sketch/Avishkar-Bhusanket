@@ -4,7 +4,7 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip } from 
 import { Link } from "@tanstack/react-router";
 
 import type { RiskLocation } from "@/lib/api/risk";
-import { riskHex, riskLabel, riskLevel, riskLevelFromBackend } from "@/lib/risk";
+import { riskHex, riskLabel, riskLevel, riskLevelFromBackend, type RiskLevel } from "@/lib/risk";
 
 export type MapLayers = {
   riskZones: boolean;
@@ -36,12 +36,27 @@ export default function RiskLeafletMap({
   layers,
   height = 420,
   compact = false,
+  demoActive = false,
+  selectedLocationId = null,
+  demoLevel = null,
+  demoAlertTriggered = false,
 }: {
   locations: RiskLocation[];
   layers?: Partial<MapLayers> | undefined;
   height?: number;
   compact?: boolean;
+  demoActive?: boolean;
+  selectedLocationId?: number | null;
+  demoLevel?: RiskLevel | null;
+  demoAlertTriggered?: boolean;
 }) {
+
+  const demoRiskScoreByLevel: Record<Exclude<RiskLevel, "low"> | "low", number> = {
+    low: 24,
+    moderate: 45,
+    high: 68,
+    critical: 94,
+  };
 
   const l: MapLayers = {
     riskZones: true,
@@ -71,17 +86,21 @@ export default function RiskLeafletMap({
         ))}
 
       {locations.map((loc) => {
-        const level = loc.risk_level
-          ? riskLevelFromBackend(loc.risk_level)
-          : riskLevel(loc.risk_score);
-        const color = riskHex[level];
+        const hasRiskData = loc.risk_score !== null && loc.risk_score !== undefined && Number.isFinite(loc.risk_score);
+        const baseLevel = hasRiskData ? (loc.risk_level ? riskLevelFromBackend(loc.risk_level) : riskLevel(loc.risk_score)) : null;
+        const baseColor = baseLevel ? riskHex[baseLevel] : "#64748b";
+        const isDemoSelected = demoActive && loc.id === selectedLocationId;
+        const effectiveLevel = isDemoSelected ? (demoAlertTriggered ? "critical" : demoLevel ?? "moderate") : baseLevel;
+        const effectiveScore = isDemoSelected ? demoRiskScoreByLevel[effectiveLevel ?? "moderate"] : loc.risk_score;
+        const markerColor = effectiveLevel ? riskHex[effectiveLevel] : "#64748b";
+
         return (
           <div key={loc.id}>
             {l.riskZones && (
               <CircleMarker
                 center={[loc.latitude, loc.longitude]}
-                radius={12 + loc.risk_score * 22}
-                pathOptions={{ color, fillColor: color, fillOpacity: 0.18, weight: 0 }}
+                radius={hasRiskData ? 12 + loc.risk_score * 22 : 8}
+                pathOptions={{ color: baseColor, fillColor: baseColor, fillOpacity: 0.18, weight: 0 }}
               />
             )}
             {l.rainfall && (
@@ -114,15 +133,17 @@ export default function RiskLeafletMap({
             )}
             <CircleMarker
               center={[loc.latitude, loc.longitude]}
-              radius={7}
-              pathOptions={{ color: "#ffffff", fillColor: color, fillOpacity: 1, weight: 2 }}
+              radius={effectiveLevel ? 7 : 6}
+              pathOptions={{ color: "#ffffff", fillColor: markerColor, fillOpacity: 1, weight: 2 }}
             >
               <Tooltip direction="top">{loc.name}</Tooltip>
               <Popup>
                 <div style={{ minWidth: 190 }}>
                   <p style={{ fontWeight: 700, margin: 0 }}>{loc.name}</p>
-                  <p style={{ margin: "2px 0 6px", color: color, fontWeight: 600 }}>
-                    Risk Level: {riskLabel[level]} · Model Probability: {loc.risk_score.toFixed(1)}%
+                  <p style={{ margin: "2px 0 6px", color: markerColor, fontWeight: 600 }}>
+                    {effectiveLevel
+                      ? `Risk Level: ${riskLabel[effectiveLevel]} · Model Probability: ${effectiveScore?.toFixed(1) ?? 0}%`
+                      : "Risk Level: Data unavailable · Awaiting observation"}
                   </p>
                   <p style={{ margin: 0, fontSize: 12 }}>Slope: {loc.slope}°</p>
                   <Link

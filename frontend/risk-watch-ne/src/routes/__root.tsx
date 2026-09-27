@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { Toaster } from "../components/ui/sonner";
 import { LocationSelectionProvider } from "../hooks/use-location-selection";
+import { DemoModeProvider } from "../hooks/use-demo-mode";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 
@@ -102,7 +103,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "shortcut icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,
@@ -131,8 +133,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <LocationSelectionProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
+        <DemoModeProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </DemoModeProvider>
       </LocationSelectionProvider>
       <Toaster position="top-right" richColors />
     </QueryClientProvider>
