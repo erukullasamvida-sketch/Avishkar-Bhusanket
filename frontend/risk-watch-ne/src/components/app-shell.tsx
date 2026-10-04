@@ -13,6 +13,7 @@ import {
   Map,
   Menu,
   Mountain,
+  SlidersHorizontal,
   Settings as SettingsIcon,
   X,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/risk-map", label: "Risk Map", icon: Map },
   { to: "/prediction", label: "AI Prediction", icon: Brain },
+  { to: "/what-if", label: "What-If Simulator", icon: SlidersHorizontal },
   { to: "/alerts", label: "Alerts", icon: Bell },
   { to: "/analytics", label: "Reports", icon: BarChart3 },
   { to: "/field-reports", label: "Field Reports", icon: FileText },

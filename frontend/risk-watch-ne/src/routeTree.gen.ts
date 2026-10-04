@@ -20,6 +20,7 @@ import { Route as AuthenticatedFieldReportsRouteImport } from './routes/_authent
 import { Route as AuthenticatedPredictionRouteImport } from './routes/_authenticated/prediction'
 import { Route as AuthenticatedRiskMapRouteImport } from './routes/_authenticated/risk-map'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedWhatIfRouteImport } from './routes/_authenticated/what-if'
 import { Route as AuthenticatedRiskIdRouteImport } from './routes/_authenticated/risk.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -78,6 +79,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedWhatIfRoute = AuthenticatedWhatIfRouteImport.update({
+  id: '/what-if',
+  path: '/what-if',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRiskIdRoute = AuthenticatedRiskIdRouteImport.update({
   id: '/risk/$id',
   path: '/risk/$id',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/prediction': typeof AuthenticatedPredictionRoute
   '/risk-map': typeof AuthenticatedRiskMapRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/what-if': typeof AuthenticatedWhatIfRoute
   '/risk/$id': typeof AuthenticatedRiskIdRoute
 }
 export interface FileRoutesByTo {
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/prediction': typeof AuthenticatedPredictionRoute
   '/risk-map': typeof AuthenticatedRiskMapRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/what-if': typeof AuthenticatedWhatIfRoute
   '/risk/$id': typeof AuthenticatedRiskIdRoute
 }
 export interface FileRoutesById {
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated/prediction': typeof AuthenticatedPredictionRoute
   '/_authenticated/risk-map': typeof AuthenticatedRiskMapRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/what-if': typeof AuthenticatedWhatIfRoute
   '/_authenticated/risk/$id': typeof AuthenticatedRiskIdRoute
 }
 export interface FileRouteTypes {
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/prediction'
     | '/risk-map'
     | '/settings'
+    | '/what-if'
     | '/risk/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/prediction'
     | '/risk-map'
     | '/settings'
+    | '/what-if'
     | '/risk/$id'
   id:
     | '__root__'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/_authenticated/prediction'
     | '/_authenticated/risk-map'
     | '/_authenticated/settings'
+    | '/_authenticated/what-if'
     | '/_authenticated/risk/$id'
   fileRoutesById: FileRoutesById
 }
@@ -253,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/what-if': {
+      id: '/_authenticated/what-if'
+      path: '/what-if'
+      fullPath: '/what-if'
+      preLoaderRoute: typeof AuthenticatedWhatIfRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/risk/$id': {
       id: '/_authenticated/risk/$id'
       path: '/risk/$id'
@@ -272,6 +291,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPredictionRoute: typeof AuthenticatedPredictionRoute
   AuthenticatedRiskMapRoute: typeof AuthenticatedRiskMapRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedWhatIfRoute: typeof AuthenticatedWhatIfRoute
   AuthenticatedRiskIdRoute: typeof AuthenticatedRiskIdRoute
 }
 
@@ -284,6 +304,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPredictionRoute: AuthenticatedPredictionRoute,
   AuthenticatedRiskMapRoute: AuthenticatedRiskMapRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedWhatIfRoute: AuthenticatedWhatIfRoute,
   AuthenticatedRiskIdRoute: AuthenticatedRiskIdRoute,
 }
 
