@@ -42,7 +42,7 @@ def prepare_features(
 
     features = {
         "rainfall_24h": observation.rainfall_24h,
-        "soil_moisture": observation.soil_moisture,
+        "soil_moisture": observation.soil_moisture * 100,
         "slope": location.slope,
         "elevation": location.elevation,
         "ndvi": location.ndvi,

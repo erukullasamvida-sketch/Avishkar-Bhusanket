@@ -16,6 +16,11 @@ class Alert(SQLModel, table=True):
 
     status: str = "ACTIVE"
 
+    risk_record_id: Optional[int] = None
+
     created_at: datetime = Field(
         default_factory=datetime.utcnow
     )
+
+    acknowledged_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None

@@ -1,13 +1,15 @@
 from datetime import datetime
 from typing import Dict, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PredictionRequest(BaseModel):
 
     rainfall_24h: float
-    soil_moisture: float
+    soil_moisture: float = Field(
+        description="Volumetric moisture percentage points (0-100) for model input."
+    )
     slope: float
     elevation: float
     ndvi: float

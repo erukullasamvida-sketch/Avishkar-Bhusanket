@@ -22,6 +22,20 @@ def create_db_and_tables():
                 "ALTER TABLE fieldreport ADD COLUMN severity VARCHAR NOT NULL DEFAULT 'moderate'"
             )
 
+        alert_columns = {
+            row[1]
+            for row in connection.exec_driver_sql("PRAGMA table_info(alert)")
+        }
+        for column, column_type in (
+            ("risk_record_id", "INTEGER"),
+            ("acknowledged_at", "DATETIME"),
+            ("resolved_at", "DATETIME"),
+        ):
+            if column not in alert_columns:
+                connection.exec_driver_sql(
+                    f"ALTER TABLE alert ADD COLUMN {column} {column_type}"
+                )
+
 
 def get_session():
     with Session(engine) as session:

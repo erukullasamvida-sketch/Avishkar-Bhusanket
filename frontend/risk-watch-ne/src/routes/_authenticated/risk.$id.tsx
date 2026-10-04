@@ -63,7 +63,7 @@ function RiskDetails() {
         <SectionCard title="Recorded Risk Factors">
           {record ? <div className="grid gap-3 sm:grid-cols-2">
             <Factor icon={<Triangle className="h-4 w-4" />} label="Rainfall (24h)" value={`${record.rainfall_24h} mm`} />
-            <Factor icon={<Mountain className="h-4 w-4" />} label="Soil Moisture" value={`${record.soil_moisture}%`} />
+            <Factor icon={<Mountain className="h-4 w-4" />} label="Soil Moisture (model input)" value={`${record.soil_moisture.toFixed(1)}%`} />
             <Factor icon={<Triangle className="h-4 w-4" />} label="Slope" value={`${record.slope}°`} />
             <Factor icon={<Mountain className="h-4 w-4" />} label="Elevation" value={`${record.elevation} m`} />
             <Factor icon={<Mountain className="h-4 w-4" />} label="NDVI" value={record.ndvi.toFixed(2)} />

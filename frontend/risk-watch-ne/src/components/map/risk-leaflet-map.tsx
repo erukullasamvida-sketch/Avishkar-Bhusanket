@@ -51,11 +51,11 @@ export default function RiskLeafletMap({
   demoAlertTriggered?: boolean;
 }) {
 
-  const demoRiskScoreByLevel: Record<Exclude<RiskLevel, "low"> | "low", number> = {
-    low: 24,
-    moderate: 45,
-    high: 68,
-    critical: 94,
+  const demoProbabilityByLevel: Record<Exclude<RiskLevel, "low"> | "low", number> = {
+    low: 0.24,
+    moderate: 0.45,
+    high: 0.68,
+    critical: 0.94,
   };
 
   const l: MapLayers = {
@@ -86,12 +86,13 @@ export default function RiskLeafletMap({
         ))}
 
       {locations.map((loc) => {
-        const hasRiskData = loc.risk_score !== null && loc.risk_score !== undefined && Number.isFinite(loc.risk_score);
-        const baseLevel = hasRiskData ? (loc.risk_level ? riskLevelFromBackend(loc.risk_level) : riskLevel(loc.risk_score)) : null;
+        const probability = loc.probability;
+        const hasRiskData = probability !== null && Number.isFinite(probability);
+        const baseLevel = hasRiskData ? (loc.risk_level ? riskLevelFromBackend(loc.risk_level) : riskLevel(probability)) : null;
         const baseColor = baseLevel ? riskHex[baseLevel] : "#64748b";
         const isDemoSelected = demoActive && loc.id === selectedLocationId;
         const effectiveLevel = isDemoSelected ? (demoAlertTriggered ? "critical" : demoLevel ?? "moderate") : baseLevel;
-        const effectiveScore = isDemoSelected ? demoRiskScoreByLevel[effectiveLevel ?? "moderate"] : loc.risk_score;
+        const effectiveProbability = isDemoSelected ? demoProbabilityByLevel[effectiveLevel ?? "moderate"] : probability;
         const markerColor = effectiveLevel ? riskHex[effectiveLevel] : "#64748b";
 
         return (
@@ -99,7 +100,7 @@ export default function RiskLeafletMap({
             {l.riskZones && (
               <CircleMarker
                 center={[loc.latitude, loc.longitude]}
-                radius={hasRiskData ? 12 + loc.risk_score * 22 : 8}
+                radius={hasRiskData ? 12 + (probability ?? 0) * 22 : 8}
                 pathOptions={{ color: baseColor, fillColor: baseColor, fillOpacity: 0.18, weight: 0 }}
               />
             )}
@@ -124,7 +125,7 @@ export default function RiskLeafletMap({
                 pathOptions={{ color: "#7C3AED", fillColor: "#7C3AED", fillOpacity: 0.1, weight: 1 }}
               />
             )}
-            {l.historical && loc.risk_score > 0.55 && (
+            {l.historical && probability !== null && probability > 0.55 && (
               <CircleMarker
                 center={[loc.latitude + 0.05, loc.longitude + 0.05]}
                 radius={5}
@@ -142,7 +143,7 @@ export default function RiskLeafletMap({
                   <p style={{ fontWeight: 700, margin: 0 }}>{loc.name}</p>
                   <p style={{ margin: "2px 0 6px", color: markerColor, fontWeight: 600 }}>
                     {effectiveLevel
-                      ? `Risk Level: ${riskLabel[effectiveLevel]} · Model Probability: ${effectiveScore?.toFixed(1) ?? 0}%`
+                      ? `Risk Level: ${riskLabel[effectiveLevel]} · Model Probability: ${((effectiveProbability ?? 0) * 100).toFixed(1)}%`
                       : "Risk Level: Data unavailable · Awaiting observation"}
                   </p>
                   <p style={{ margin: 0, fontSize: 12 }}>Slope: {loc.slope}°</p>

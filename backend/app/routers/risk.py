@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 from ..database import get_session
 from ..models.location import Location
 from ..models.risk import RiskRecord
+from ..services.alert_service import get_response_recommendation
 
 router = APIRouter(
     prefix="/api/risk",
@@ -37,6 +38,46 @@ def get_risk_zones():
             "risk_score": 72
         }
     ]
+
+
+@router.get("/{location_id}/timeline")
+def get_risk_timeline(
+    location_id: int,
+    session: Session = Depends(get_session),
+):
+    location = session.get(Location, location_id)
+    if location is None:
+        raise HTTPException(status_code=404, detail="Location not found")
+
+    records = session.exec(
+        select(RiskRecord)
+        .where(RiskRecord.location_id == location_id)
+        .order_by(RiskRecord.created_at.asc(), RiskRecord.id.asc())
+    ).all()
+
+    return {
+        "location_id": location_id,
+        "location_name": location.name,
+        "events": [
+            {
+                "id": record.id,
+                "risk_level": record.risk_level,
+                "risk_score": record.risk_score,
+                "probability": record.probability,
+                "created_at": record.created_at,
+                "rainfall_24h": record.rainfall_24h,
+                "soil_moisture": record.soil_moisture,
+                "slope": record.slope,
+                "elevation": record.elevation,
+                "ndvi": record.ndvi,
+                "historical_events": record.historical_events,
+                "response_recommendation": get_response_recommendation(
+                    record.risk_level
+                ),
+            }
+            for record in records
+        ],
+    }
 
 
 @router.get("/{location_id}")

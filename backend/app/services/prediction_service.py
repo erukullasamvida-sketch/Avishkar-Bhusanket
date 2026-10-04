@@ -58,6 +58,7 @@ def predict_location_risk(
         location_id=prepared["location_id"],
         location_name=location.name,
         risk_level=prediction["risk_level"],
+        risk_record_id=risk_record.id,
     )
 
     return {

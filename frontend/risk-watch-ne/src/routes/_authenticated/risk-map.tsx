@@ -73,7 +73,7 @@ function RiskMapPage() {
           const hasRiskRecord = Boolean(risk.risk_record);
           return {
             ...location,
-            risk_score: hasRiskRecord ? risk.risk_record!.probability : null,
+            probability: hasRiskRecord ? risk.risk_record!.probability : null,
             risk_level: hasRiskRecord ? risk.risk_record!.risk_level : "Data unavailable",
             district: location.district,
             state: location.district,
@@ -92,7 +92,7 @@ function RiskMapPage() {
         ndvi: number;
         historical_events: number;
         monitored: boolean;
-        risk_score: number | null;
+        probability: number | null;
         risk_level: string;
       }>;
     },
@@ -115,11 +115,11 @@ function RiskMapPage() {
     [backendLocations],
   );
 
-  const demoRiskScoreByLevel = {
-    low: 24,
-    moderate: 45,
-    high: 68,
-    critical: 94,
+  const demoProbabilityByLevel = {
+    low: 0.24,
+    moderate: 0.45,
+    high: 0.68,
+    critical: 0.94,
   } as const;
 
   const selectedDemoLevel =
@@ -138,15 +138,15 @@ function RiskMapPage() {
       return {
         ...location,
         risk_level: selectedDemoLevel,
-        risk_score: demoRiskScoreByLevel[selectedDemoLevel],
+        probability: demoProbabilityByLevel[selectedDemoLevel],
       };
     });
-  }, [demoRiskScoreByLevel, locations, selectedDemoLevel, selectedLocationId]);
+  }, [demoProbabilityByLevel, locations, selectedDemoLevel, selectedLocationId]);
 
   const filtered = displayLocations.filter((l) => {
     const matchesSearch = !search || l.name.toLowerCase().includes(search.toLowerCase());
     const matchesDistrict = district === "all" || l.district === district;
-    const hasRiskData = l.risk_score !== null && l.risk_score !== undefined;
+    const hasRiskData = l.probability !== null && l.probability !== undefined;
     const matchesLevel =
       level === "all" || (hasRiskData && riskLevelFromBackend(l.risk_level) === level);
     return matchesSearch && matchesDistrict && matchesLevel;
@@ -255,18 +255,18 @@ function RiskMapPage() {
           <SectionCard title="Locations">
             <ul className="max-h-80 space-y-2 overflow-y-auto">
               {filtered.map((loc) => {
-                const hasRiskData = loc.risk_score !== null && loc.risk_score !== undefined;
+                const hasRiskData = loc.probability !== null && loc.probability !== undefined;
                 const effectiveRiskLevel =
                   demoActive && selectedLocationId === loc.id
                     ? (demoAlertTriggered ? "critical" : demoLevel ?? "moderate")
                     : hasRiskData
                       ? riskLevelFromBackend(loc.risk_level)
                       : undefined;
-                const effectiveRiskScore =
+                const effectiveProbability =
                   demoActive && selectedLocationId === loc.id
-                    ? demoRiskScoreByLevel[effectiveRiskLevel ?? "moderate"]
+                    ? demoProbabilityByLevel[effectiveRiskLevel ?? "moderate"]
                     : hasRiskData
-                      ? loc.risk_score
+                      ? loc.probability
                       : undefined;
 
                 return (
@@ -286,7 +286,7 @@ function RiskMapPage() {
                       </span>
                       <RiskBadge
                         level={effectiveRiskLevel}
-                        score={effectiveRiskScore !== undefined ? effectiveRiskScore / 100 : undefined}
+                        score={effectiveProbability}
                         showScore={Boolean(effectiveRiskLevel)}
                       />
                     </Link>
