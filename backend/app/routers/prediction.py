@@ -3,9 +3,10 @@ from sqlmodel import Session
 
 from ..database import get_session
 from ..schemas.prediction import PredictionRequest, PredictionResponse
-from ..ml.predict import predict_risk
+from ..ml.predict import model, predict_risk
 from ..services.feature_preparation import prepare_features
 from ..services.prediction_service import predict_location_risk
+from ..services.risk_engine import get_feature_importance
 
 
 router = APIRouter(
@@ -26,8 +27,13 @@ def create_prediction(
     return result
 
 
-@router.get("/{location_id}")
-def get_location_prediction(
+@router.get("/feature-importance")
+def get_prediction_feature_importance():
+    return get_feature_importance(model)
+
+
+@router.post("/{location_id}/run")
+def run_location_prediction(
     location_id: int,
     session: Session = Depends(get_session)
 ):

@@ -49,8 +49,8 @@ function Dashboard() {
           const risk = await getRiskZone(location.id);
           return {
             ...location,
-            risk_score: risk.risk_record?.probability ?? 0,
-            risk_level: risk.risk_record?.risk_level ?? "Low",
+            probability: risk.risk_record?.probability ?? null,
+            risk_level: risk.risk_record?.risk_level ?? "Data unavailable",
             rainfall_24h: risk.risk_record?.rainfall_24h ?? 0,
           };
         }),
@@ -69,7 +69,9 @@ function Dashboard() {
   const rainfall = Math.round(
     riskLocations.reduce((sum, l) => sum + l.rainfall_24h, 0) / Math.max(1, riskLocations.length),
   );
-  const priority = [...riskLocations].sort((a, b) => b.risk_score - a.risk_score).slice(0, 5);
+  const priority = [...riskLocations]
+    .sort((a, b) => (b.probability ?? -1) - (a.probability ?? -1))
+    .slice(0, 5);
   const recent = alerts.slice(0, 4);
 
   return (
@@ -126,7 +128,9 @@ function Dashboard() {
                 <li key={alert.id} className="rounded-md border border-border p-3">
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                     <p className="min-w-0 text-sm font-semibold text-foreground">{alert.title}</p>
-                    <RiskBadge score={alert.risk_score} />
+                    <RiskBadge
+                      level={alert.severity === "CRITICAL" ? "critical" : "high"}
+                    />
                   </div>
                   <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{alert.message}</p>
                   <p className="mt-2 text-[11px] text-muted-foreground">{timeAgo(alert.created_at)}</p>
@@ -162,10 +166,19 @@ function Dashboard() {
                   <td className="py-2.5 pr-3 text-muted-foreground">{loc.district}</td>
                   <td className="py-2.5 pr-3 text-muted-foreground">{loc.rainfall_24h} mm</td>
                   <td className="py-2.5 pr-3 font-semibold text-foreground">
-                    {loc.risk_score.toFixed(1)}%
+                    {loc.probability === null
+                      ? "Unavailable"
+                      : `${(loc.probability * 100).toFixed(1)}%`}
                   </td>
                   <td className="py-2.5 pr-3">
-                    <RiskBadge level={riskLevelFromBackend(loc.risk_level ?? "Low")} score={loc.risk_score / 100} />
+                    {loc.probability === null ? (
+                      <RiskBadge />
+                    ) : (
+                      <RiskBadge
+                        level={riskLevelFromBackend(loc.risk_level)}
+                        score={loc.probability}
+                      />
+                    )}
                   </td>
                   <td className="py-2.5 text-right">
                     <Link

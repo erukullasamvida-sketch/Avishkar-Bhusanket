@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CloudRain,
   Database,
@@ -11,7 +12,14 @@ import {
 
 import { AppShell, SectionCard } from "@/components/app-shell";
 import { StatusPill } from "@/components/risk-badge";
+import { Button } from "@/components/ui/button";
+import { useLocationSelection } from "@/hooks/use-location-selection";
 import { useProfile } from "@/hooks/use-profile";
+import {
+  getEnvironmentalData,
+  refreshEnvironmentalData,
+  type EnvironmentalObservation,
+} from "@/lib/api/environmental";
 
 export const Route = createFileRoute("/_authenticated/data-sources")({
   head: () => ({
@@ -96,13 +104,116 @@ const SOURCES = [
 
 function DataSourcesPage() {
   const { data: profile } = useProfile();
+  const { selectedLocationId, selectedLocation } = useLocationSelection();
+  const queryClient = useQueryClient();
+  const queryKey = ["environmental_data", selectedLocationId];
+  const { data: observations = [], isLoading, error } = useQuery({
+    queryKey,
+    queryFn: () => getEnvironmentalData(selectedLocationId!),
+    enabled: selectedLocationId !== null,
+  });
+  const refresh = useMutation({
+    mutationFn: (locationId: number) => refreshEnvironmentalData(locationId),
+    onSuccess: async (_observation, locationId) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["environmental_data", locationId],
+      });
+    },
+  });
+  const latest: EnvironmentalObservation | undefined = observations[0];
+  const refreshedAt =
+    refresh.data?.location_id === selectedLocationId ? refresh.data.fetched_at : null;
 
   return (
     <AppShell
       title="Data Sources"
-      subtitle="Current backend environmental source status"
+      subtitle="Forecast environmental inputs stored by the backend"
       user={profile ? { name: profile.name, role: profile.roleLabel } : null}
     >
+      <SectionCard
+        title="Environmental Data"
+        description="Open-Meteo forecast values stored for the selected backend location."
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {selectedLocation?.name ?? "Select a location"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Forecast values are not field sensor observations.
+            </p>
+          </div>
+          <Button
+            onClick={() => {
+              if (selectedLocationId !== null) refresh.mutate(selectedLocationId);
+            }}
+            disabled={selectedLocationId === null || refresh.isPending}
+          >
+            {refresh.isPending ? "Refreshing..." : "Refresh Environmental Data"}
+          </Button>
+        </div>
+
+        {refresh.isError && (
+          <p role="alert" className="mb-3 text-sm text-risk-critical">
+            Refresh failed: {refresh.error.message}. Previously stored data is unchanged.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="mb-3 text-sm text-risk-critical">
+            Could not load stored environmental data: {error.message}
+          </p>
+        )}
+        {selectedLocationId === null ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Select a location from the global location selector.
+          </p>
+        ) : isLoading ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Loading stored environmental data...
+          </p>
+        ) : latest ? (
+          <>
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+              <StatusPill status="FORECAST" />
+              <StatusPill status={latest.data_status} />
+              <span className="text-muted-foreground">Source: {latest.source}</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <EnvironmentalValue
+                label="Rainfall (24h forecast)"
+                value={`${latest.rainfall_24h.toFixed(1)} mm`}
+              />
+              <EnvironmentalValue
+                label="Soil moisture (forecast, %)"
+                value={`${(latest.soil_moisture * 100).toFixed(1)}%`}
+                detail="Stored fraction converted to percent for display"
+              />
+              <EnvironmentalValue
+                label="Temperature (forecast)"
+                value={latest.temperature === null ? "Unavailable" : `${latest.temperature.toFixed(1)} °C`}
+              />
+              <EnvironmentalValue
+                label="Humidity (forecast)"
+                value={latest.humidity === null ? "Unavailable" : `${latest.humidity.toFixed(1)}%`}
+              />
+            </div>
+            <div className="mt-4 space-y-1 text-xs text-muted-foreground">
+              <p>
+                Forecast valid at: {latest.observed_at.replace("T", " ")}{" "}
+                {latest.timestamp_timezone ?? ""}
+              </p>
+              <p>
+                Last fetched: {refreshedAt ? new Date(refreshedAt).toLocaleString() : "Fetch time is not stored"}
+              </p>
+            </div>
+          </>
+        ) : (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No stored environmental data for this location. Refresh to fetch a forecast.
+          </p>
+        )}
+      </SectionCard>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {SOURCES.map((source) => {
           const Icon = ICONS[source.category] ?? Database;
@@ -124,5 +235,23 @@ function DataSourcesPage() {
         })}
       </div>
     </AppShell>
+  );
+}
+
+function EnvironmentalValue({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-foreground">{value}</p>
+      {detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}
+    </div>
   );
 }
