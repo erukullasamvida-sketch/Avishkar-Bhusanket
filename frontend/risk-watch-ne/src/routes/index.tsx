@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Mountain, ShieldCheck } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { testBackend } from"@/lib/api/test";
+import { testBackend } from "@/lib/api/test";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +50,6 @@ const DEMO_ACCOUNTS = [
 ] as const;
 
 function AuthPage() {
-
   useEffect(() => {
     testBackend()
       .then((data) => {
@@ -79,44 +78,51 @@ function AuthPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setBusy("login");
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail.trim(),
-      password: loginPassword,
-    });
-    setBusy(null);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
+      if (error) {
+        toast.error("Unable to sign in. Check your email and password, then try again.");
+        return;
+      }
+      await enter();
+    } catch {
+      toast.error("Unable to sign in right now. Please try again.");
+    } finally {
+      setBusy(null);
     }
-    await enter();
   }
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setBusy("signup");
-    const { error } = await supabase.auth.signUp({
-      email: signupEmail.trim(),
-      password: signupPassword,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { full_name: signupName || signupEmail.split("@")[0], role: "field_officer" },
-      },
-    });
-    if (error) {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail.trim(),
+        password: signupPassword,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: { full_name: signupName || signupEmail.split("@")[0], role: "field_officer" },
+        },
+      });
+      if (error) {
+        toast.error("Unable to create your account. Please check your details and try again.");
+        return;
+      }
+      if (!data.session) {
+        toast.success(
+          "Account created. Please check your email and confirm your account before signing in.",
+        );
+        return;
+      }
+      await enter();
+    } catch {
+      toast.error("Unable to create your account right now. Please try again.");
+    } finally {
       setBusy(null);
-      toast.error(error.message);
-      return;
     }
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: signupEmail.trim(),
-      password: signupPassword,
-    });
-    setBusy(null);
-    if (signInError) {
-      toast.success("Account created. Please sign in.");
-      return;
-    }
-    await enter();
   }
 
   async function demoLogin(account: (typeof DEMO_ACCOUNTS)[number]) {

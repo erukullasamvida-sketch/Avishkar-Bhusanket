@@ -1,7 +1,10 @@
 import os
 
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+load_dotenv()
 
 from .auth import require_supabase_auth
 from .database import create_db_and_tables
@@ -32,6 +35,8 @@ frontend_origins = {
         (
             "http://localhost:5173,"
             "http://127.0.0.1:5173,"
+            "http://localhost:8080,"
+            "http://127.0.0.1:8080,"
             "https://unguided-enlighten-pawing.ngrok-free.dev"
         ),
     ).split(",")
