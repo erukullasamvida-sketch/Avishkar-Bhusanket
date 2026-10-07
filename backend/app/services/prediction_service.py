@@ -1,10 +1,20 @@
+import logging
+
 from sqlmodel import Session
 
+from ..auth import AuthenticatedUser
 from ..ml.predict import predict_risk
 from ..models.location import Location
 from ..models.risk import RiskRecord
 from .alert_service import evaluate_alert_condition
 from .feature_preparation import prepare_features
+from .notification_service import (
+    get_alert_notifications_enabled,
+    send_alert_notifications,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 def build_explanation(features: dict, risk_level: str):
@@ -23,7 +33,8 @@ def build_explanation(features: dict, risk_level: str):
 
 def predict_location_risk(
     location_id: int,
-    session: Session
+    session: Session,
+    authenticated_user: AuthenticatedUser | None = None,
 ):
     prepared = prepare_features(location_id, session)
     prediction = predict_risk(prepared["features"])
@@ -60,6 +71,39 @@ def predict_location_risk(
         risk_level=prediction["risk_level"],
         risk_record_id=risk_record.id,
     )
+
+    alert = alert_result["alert"]
+    if (
+        alert_result["created"]
+        and alert is not None
+        and alert.id is not None
+        and alert.severity.upper() in {"HIGH", "CRITICAL"}
+        and authenticated_user is not None
+    ):
+        if authenticated_user.is_demo:
+            logger.info("Notifications skipped for alert %s: demo session", alert.id)
+        elif not authenticated_user.phone or not authenticated_user.phone.strip():
+            logger.info("Notifications skipped for alert %s: no recipient phone configured", alert.id)
+        elif authenticated_user.id is None or authenticated_user.access_token is None:
+            logger.warning("Notifications skipped for alert %s: verified user context is incomplete", alert.id)
+        else:
+            notifications_enabled = get_alert_notifications_enabled(
+                authenticated_user.id,
+                authenticated_user.access_token,
+            )
+            if notifications_enabled is False:
+                logger.info("Notifications skipped for alert %s: user preference is disabled", alert.id)
+            elif notifications_enabled is None:
+                logger.warning("Notifications skipped for alert %s: user preference could not be verified", alert.id)
+            else:
+                send_alert_notifications(
+                    recipient_phone=authenticated_user.phone.strip(),
+                    severity=alert.severity,
+                    title=alert.title,
+                    message=alert.message,
+                    alert_id=alert.id,
+                    location_name=location.name,
+                )
 
     return {
         "location_id": prepared["location_id"],

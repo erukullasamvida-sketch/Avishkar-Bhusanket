@@ -10,11 +10,14 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   vite: {
     server: {
+      port: 5173,
+      strictPort: true,
       allowedHosts: ["unguided-enlighten-pawing.ngrok-free.dev"],
     },
   },
 
   tanstackStart: {
     server: { entry: "server" },
+    router: { autoCodeSplitting: false },
   },
 });

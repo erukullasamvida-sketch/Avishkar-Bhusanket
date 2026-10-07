@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { ROLE_LABELS, useProfile } from "@/hooks/use-profile";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizePhoneNumber } from "@/lib/phone";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -59,13 +60,16 @@ function SettingsPage() {
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState("field_officer");
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [saving, setSaving] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setName(profile.name);
+      setPhone(profile.phone);
       setRole(profile.role);
     }
   }, [profile]);
@@ -103,6 +107,27 @@ function SettingsPage() {
     toast.success("Profile updated");
   }
 
+  async function savePhoneNumber() {
+    if (!profile) return;
+    const normalizedPhone = phone.trim() ? normalizePhoneNumber(phone) : null;
+    if (phone.trim() && !normalizedPhone) {
+      toast.error("Enter a valid mobile number with country code, such as +91 98765 43210.");
+      return;
+    }
+
+    setSavingPhone(true);
+    const { error } = await supabase.auth.updateUser({
+      data: { phone: normalizedPhone },
+    });
+    setSavingPhone(false);
+    if (error) {
+      toast.error("Could not save your mobile number.");
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["profile"] });
+    toast.success("Mobile number updated");
+  }
+
   async function savePref(patch: Partial<Prefs>) {
     const next = { ...prefs, ...patch };
     setPrefs(next);
@@ -121,7 +146,7 @@ function SettingsPage() {
     ["realtime_alerts", "Enable real-time alerts", "Show live alerts as monitoring data arrives"],
     ["critical_alerts", "Critical alerts", "Always notify me about critical risk areas"],
     ["email_notifications", "Email notifications", "Send alert summaries to my email"],
-    ["sms_notifications", "SMS notifications", "Send critical alerts by SMS"],
+    ["sms_notifications", "SMS notifications", "Allow SMS alerts"],
   ];
 
   return (
@@ -145,6 +170,23 @@ function SettingsPage() {
             <div className="space-y-2">
               <Label htmlFor="fullname">Full name</Label>
               <Input id="fullname" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mobile-number">Mobile number</Label>
+              <Input
+                id="mobile-number"
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+              />
+              <p className="text-xs text-muted-foreground">
+                Include your country code. This number is used for alerts, not login.
+              </p>
+              <Button onClick={savePhoneNumber} disabled={savingPhone}>
+                Save mobile number
+              </Button>
             </div>
             <div className="space-y-2">
               <Label>Role</Label>

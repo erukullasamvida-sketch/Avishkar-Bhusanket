@@ -323,7 +323,12 @@ function WhatIfPage() {
                 <div key={field.key} className="rounded-md border border-border bg-card p-3">
                   <p className="text-xs text-muted-foreground">{field.label}</p>
                   <p className="mt-1 font-semibold text-foreground">
-                    {formatValue(baselineModelFeatures[field.key], field.precision)}{" "}
+                    {formatValue(
+                      field.key === "soil_moisture" && baselineFeatures
+                        ? baselineFeatures[field.key]
+                        : baselineModelFeatures[field.key],
+                      field.precision,
+                    )}{" "}
                     <span className="text-xs font-normal text-muted-foreground">{field.unit}</span>
                   </p>
                 </div>
@@ -371,7 +376,13 @@ function WhatIfPage() {
                     <span className="font-normal text-muted-foreground">({field.unit})</span>
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    Baseline: {formatValue(baselineModelFeatures[field.key], field.precision)}{" "}
+                    Baseline:{" "}
+                    {formatValue(
+                      field.key === "soil_moisture" && baselineFeatures
+                        ? baselineFeatures[field.key]
+                        : baselineModelFeatures[field.key],
+                      field.precision,
+                    )}{" "}
                     {field.unit}
                   </p>
                   <Input

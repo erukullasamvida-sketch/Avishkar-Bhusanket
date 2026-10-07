@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlmodel import SQLModel, Field
 
@@ -14,7 +14,7 @@ class Sensor(SQLModel, table=True):
     status: str
 
     last_update: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=lambda: datetime.now(timezone.utc)
     )
 
     value: Optional[float] = None

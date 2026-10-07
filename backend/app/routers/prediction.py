@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
+from ..auth import AuthenticatedUser, require_supabase_auth
 from ..database import get_session
 from ..schemas.prediction import PredictionRequest, PredictionResponse
 from ..ml.predict import model, predict_risk
@@ -35,10 +36,15 @@ def get_prediction_feature_importance():
 @router.post("/{location_id}/run")
 def run_location_prediction(
     location_id: int,
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    authenticated_user: AuthenticatedUser = Depends(require_supabase_auth),
 ):
     try:
-        return predict_location_risk(location_id, session)
+        return predict_location_risk(
+            location_id,
+            session,
+            authenticated_user=authenticated_user,
+        )
 
     except ValueError as exc:
         raise HTTPException(

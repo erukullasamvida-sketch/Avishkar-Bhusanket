@@ -7,7 +7,7 @@ import { MapPanel } from "@/components/map/map-panel";
 import { RiskBadge } from "@/components/risk-badge";
 import { Button } from "@/components/ui/button";
 import { getAlerts } from "@/lib/api/alerts";
-import { getDashboard } from "@/lib/api/dashboard";
+import { getEnvironmentalData } from "@/lib/api/environmental";
 import { getLocations } from "@/lib/api/locations";
 import { getRiskZone } from "@/lib/api/risk";
 import { useProfile } from "@/hooks/use-profile";
@@ -36,43 +36,68 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const { data: profile } = useProfile();
-  const { data: dashboardData } = useQuery({
-    queryKey: ["dashboard-live"],
-    queryFn: () => getDashboard(),
-  });
-  const { data: riskLocations = [] } = useQuery({
+  const {
+    data: riskLocations = [],
+    isLoading: riskLocationsLoading,
+    error: riskLocationsError,
+  } = useQuery({
     queryKey: ["dashboard-risk-locations"],
     queryFn: async () => {
       const locations = await getLocations();
       const entries = await Promise.all(
         locations.map(async (location) => {
-          const risk = await getRiskZone(location.id);
+          const [risk, observations] = await Promise.all([
+            getRiskZone(location.id),
+            getEnvironmentalData(location.id),
+          ]);
+          const latestObservation = observations[0];
           return {
             ...location,
             probability: risk.risk_record?.probability ?? null,
             risk_level: risk.risk_record?.risk_level ?? "Data unavailable",
-            rainfall_24h: risk.risk_record?.rainfall_24h ?? 0,
+            rainfall_24h: latestObservation?.rainfall_24h ?? null,
+            observed_at: latestObservation?.observed_at ?? null,
           };
         }),
       );
       return entries;
     },
   });
-  const { data: alerts = [] } = useQuery({
+  const {
+    data: alerts = [],
+    isLoading: alertsLoading,
+    error: alertsError,
+  } = useQuery({
     queryKey: ["dashboard-alerts-live"],
     queryFn: () => getAlerts(),
   });
 
-  const monitoredLocations = dashboardData?.monitored_locations ?? riskLocations.length;
-  const highRisk = riskLocations.filter((l) => riskLevelFromBackend(l.risk_level ?? "Low") === "high").length;
-  const critical = riskLocations.filter((l) => riskLevelFromBackend(l.risk_level ?? "Low") === "critical").length;
-  const rainfall = Math.round(
-    riskLocations.reduce((sum, l) => sum + l.rainfall_24h, 0) / Math.max(1, riskLocations.length),
-  );
+  const monitoredLocations = riskLocations.length;
+  const highRisk = riskLocations.filter((location) => location.risk_level === "High").length;
+  const critical = riskLocations.filter((location) => location.risk_level === "Critical").length;
+  const latestRainfall = riskLocations
+    .filter(
+      (location): location is typeof location & { rainfall_24h: number; observed_at: string } =>
+        location.rainfall_24h !== null && location.observed_at !== null,
+    )
+    .reduce<(typeof riskLocations)[number] | null>(
+      (latest, location) =>
+        latest === null ||
+        Date.parse(location.observed_at) > Date.parse(latest.observed_at ?? "")
+          ? location
+          : latest,
+      null,
+    );
+  const rainfall = latestRainfall
+    ? latestRainfall.rainfall_24h.toFixed(1)
+    : "Unavailable";
   const priority = [...riskLocations]
+    .filter((location) => location.probability !== null)
     .sort((a, b) => (b.probability ?? -1) - (a.probability ?? -1))
     .slice(0, 5);
-  const recent = alerts.slice(0, 4);
+  const recent = alerts
+    .filter((alert) => alert.status === "ACTIVE")
+    .slice(0, 4);
 
   return (
     <AppShell
@@ -81,10 +106,16 @@ function Dashboard() {
       user={profile ? { name: profile.name, role: profile.roleLabel } : null}
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total Monitored Areas" value={monitoredLocations} icon={Layers} />
-        <KpiCard label="High Risk Areas" value={highRisk} icon={AlertTriangle} tone="high" />
-        <KpiCard label="Critical Areas" value={critical} icon={ShieldAlert} tone="critical" />
-        <KpiCard label="Recent Rainfall" value={rainfall} unit="mm" icon={CloudRain} tone="info" />
+        <KpiCard label="Total Monitored Areas" value={riskLocationsLoading ? "…" : riskLocationsError ? "Unavailable" : monitoredLocations} icon={Layers} />
+        <KpiCard label="High Risk Areas" value={riskLocationsLoading ? "…" : riskLocationsError ? "Unavailable" : highRisk} icon={AlertTriangle} tone="high" />
+        <KpiCard label="Critical Areas" value={riskLocationsLoading ? "…" : riskLocationsError ? "Unavailable" : critical} icon={ShieldAlert} tone="critical" />
+        <KpiCard
+          label="Recent Rainfall"
+          value={riskLocationsLoading ? "…" : rainfall}
+          unit={riskLocationsLoading || riskLocationsError ? undefined : "mm"}
+          icon={CloudRain}
+          tone="info"
+        />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.6fr_minmax(0,1fr)]">
@@ -97,7 +128,17 @@ function Dashboard() {
             </Button>
           }
         >
-          <MapPanel locations={riskLocations} height={380} compact />
+          {riskLocationsError ? (
+            <p role="alert" className="py-6 text-center text-sm text-risk-critical">
+              Could not load monitored locations: {riskLocationsError.message}
+            </p>
+          ) : riskLocationsLoading ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Loading monitored locations…
+            </p>
+          ) : (
+            <MapPanel locations={riskLocations} height={380} compact />
+          )}
           <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
             {[
               ["Low", "bg-risk-low"],
@@ -120,7 +161,13 @@ function Dashboard() {
             </Button>
           }
         >
-          {recent.length === 0 ? (
+          {alertsError ? (
+            <p role="alert" className="py-6 text-center text-sm text-risk-critical">
+              Could not load active alerts: {alertsError.message}
+            </p>
+          ) : alertsLoading ? (
+            <EmptyRow>Loading active alerts…</EmptyRow>
+          ) : recent.length === 0 ? (
             <EmptyRow>No active alerts.</EmptyRow>
           ) : (
             <ul className="space-y-3">
@@ -155,7 +202,19 @@ function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {priority.map((loc) => (
+              {riskLocationsError ? (
+                <tr>
+                  <td colSpan={6} className="py-4 text-center text-sm text-risk-critical">
+                    Could not load priority areas: {riskLocationsError.message}
+                  </td>
+                </tr>
+              ) : riskLocationsLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-4 text-center text-sm text-muted-foreground">
+                    Loading priority areas…
+                  </td>
+                </tr>
+              ) : priority.map((loc) => (
                 <tr key={loc.id} className="border-b border-border/60 last:border-0">
                   <td className="py-2.5 pr-3 font-medium text-foreground">
                     <span className="flex items-center gap-2">
@@ -164,7 +223,9 @@ function Dashboard() {
                     </span>
                   </td>
                   <td className="py-2.5 pr-3 text-muted-foreground">{loc.district}</td>
-                  <td className="py-2.5 pr-3 text-muted-foreground">{loc.rainfall_24h} mm</td>
+                  <td className="py-2.5 pr-3 text-muted-foreground">
+                    {loc.rainfall_24h === null ? "Unavailable" : `${loc.rainfall_24h.toFixed(1)} mm`}
+                  </td>
                   <td className="py-2.5 pr-3 font-semibold text-foreground">
                     {loc.probability === null
                       ? "Unavailable"

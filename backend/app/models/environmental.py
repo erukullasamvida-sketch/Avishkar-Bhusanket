@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlmodel import Field, SQLModel
@@ -17,4 +17,4 @@ class EnvironmentalObservation(SQLModel, table=True):
 
     source: str = "Open-Meteo"
 
-    observed_at: datetime = Field(default_factory=datetime.utcnow)
+    observed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

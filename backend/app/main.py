@@ -1,8 +1,15 @@
 import os
+from ipaddress import ip_address
+from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import auth
 from .auth import require_supabase_auth
 from .database import create_db_and_tables
 
@@ -20,7 +27,7 @@ from .routers import (
 
 
 app = FastAPI(
-    title="LandslideGuard API",
+    title="BHUSANKET API",
     description="AI-powered landslide early warning and risk monitoring API",
     version="1.0.0"
 )
@@ -55,9 +62,47 @@ def startup():
 @app.get("/")
 def root():
     return {
-        "application": "LandslideGuard",
+        "application": "BHUSANKET",
         "status": "operational",
         "version": "1.0.0"
+    }
+
+
+@app.post("/api/demo/session")
+def create_local_demo_session(request: Request):
+    client_host = request.client.host if request.client else ""
+    origin = request.headers.get("origin", "")
+    try:
+        is_loopback = ip_address(client_host).is_loopback
+    except ValueError:
+        is_loopback = False
+
+    try:
+        origin_url = urlsplit(origin)
+        origin_host = origin_url.hostname or ""
+        origin_is_loopback = (
+            origin_url.scheme == "http"
+            and (
+                origin_host == "localhost"
+                or ip_address(origin_host).is_loopback
+            )
+        )
+    except ValueError:
+        origin_is_loopback = False
+
+    if (
+        not is_loopback
+        or origin not in frontend_origins
+        or not origin_is_loopback
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Demo login is only available from an allowed local frontend",
+        )
+
+    return {
+        "access_token": auth._local_demo_token,
+        "token_type": "bearer",
     }
 
 

@@ -1,6 +1,6 @@
-# LandslideGuard NE
+# BHUSANKET
 
-Build "LandslideGuard", an AI-based early warning and landslide risk monitoring platform for the North Eastern Region of India (Smart India Hackathon prototype).
+Build "BHUSANKET", an AI-based early warning and landslide risk monitoring platform for the North Eastern Region of India (Smart India Hackathon prototype).
 
 Use the attached reference image (sihh.jpeg) as visual inspiration for layout, navigation, spacing, dashboard structure, and responsive design.
 
@@ -55,23 +55,13 @@ Core Pages & Navigation:
    - Profile/Account, System preferences, Notification toggles (Critical Alerts, Email, SMS), Language selector (English, Hindi, Assamese, Bengali)
 
 Supabase Backend & Demo Data:
-- Enable Lovable Cloud / Supabase
+- Enable Supabase
 - Tables: profiles, risk_locations, risk_history, alerts, field_reports, predictions, data_sources, settings
 - Storage bucket for field report photos
 - Seed realistic demo data for Assam & NE India locations (Dima Hasao, Haflong, Maibong, Umrangso, Karbi Anglong)
 - Simple client-side fallback/offline resilience so the demo never breaks even if network is slow
 
 Ensure full responsive design with a collapsible mobile sidebar / bottom navigation bar.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/845c6865-6187-486a-ab0e-bf9f0dcc7327).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 

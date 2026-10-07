@@ -10,8 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { API_BASE_URL } from "@/lib/api/client";
+import { setLocalDemoSession } from "@/lib/demo-auth";
+import { normalizePhoneNumber } from "@/lib/phone";
 
 export const Route = createFileRoute("/")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "BHUSANKET — AI Landslide Early Warning System" },
@@ -34,17 +38,15 @@ export const Route = createFileRoute("/")({
 });
 
 const DEMO_ACCOUNTS = [
-  { role: "admin", label: "Admin", email: "admin@bhusanket.in", name: "Admin" },
+  { role: "admin", label: "Admin", name: "Admin" },
   {
     role: "dmo",
     label: "Disaster Management Officer",
-    email: "dmo@bhusanket.in",
     name: "D. Sharma",
   },
   {
     role: "field_officer",
     label: "Field Officer",
-    email: "field@bhusanket.in",
     name: "R. Terang",
   },
 ] as const;
@@ -70,6 +72,7 @@ function AuthPage() {
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
 
   async function enter() {
     await queryClient.invalidateQueries();
@@ -93,13 +96,22 @@ function AuthPage() {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
+    const phone = normalizePhoneNumber(signupPhone);
+    if (!phone) {
+      toast.error("Enter a valid mobile number with country code, such as +91 98765 43210.");
+      return;
+    }
     setBusy("signup");
     const { error } = await supabase.auth.signUp({
       email: signupEmail.trim(),
       password: signupPassword,
       options: {
         emailRedirectTo: window.location.origin,
-        data: { full_name: signupName || signupEmail.split("@")[0], role: "field_officer" },
+        data: {
+          full_name: signupName || signupEmail.split("@")[0],
+          role: "field_officer",
+          phone,
+        },
       },
     });
     if (error) {
@@ -121,33 +133,37 @@ function AuthPage() {
 
   async function demoLogin(account: (typeof DEMO_ACCOUNTS)[number]) {
     setBusy(account.role);
-    const demoPassword = import.meta.env.VITE_DEMO_PASSWORD;
-    if (!demoPassword) {
-      setBusy(null);
-      toast.error("Demo login is not configured.");
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/demo/session`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Demo login failed (HTTP ${response.status})`);
+      }
+
+      const result: unknown = await response.json();
+      if (
+        typeof result !== "object" ||
+        result === null ||
+        !("access_token" in result) ||
+        typeof result.access_token !== "string"
+      ) {
+        throw new Error("Demo login returned an invalid session.");
+      }
+
+      setLocalDemoSession({
+        access_token: result.access_token,
+        role: account.role,
+        name: account.name,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Demo login failed.");
       return;
+    } finally {
+      setBusy(null);
     }
 
-    let { error } = await supabase.auth.signInWithPassword({
-      email: account.email,
-      password: demoPassword,
-    });
-    if (error) {
-      await supabase.auth.signUp({
-        email: account.email,
-        password: demoPassword,
-        options: { data: { full_name: account.name, role: account.role } },
-      });
-      ({ error } = await supabase.auth.signInWithPassword({
-        email: account.email,
-        password: demoPassword,
-      }));
-    }
-    setBusy(null);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
     await enter();
   }
 
@@ -172,19 +188,9 @@ function AuthPage() {
             North Eastern Region — with predictive alerts, GIS mapping and field reporting for
             disaster management teams.
           </p>
-          <div className="mt-8 grid grid-cols-2 gap-4">
-            {[
-              ["8", "Monitored locations"],
-              ["0", "Active alerts"],
-              ["24×7", "Monitoring"],
-              ["8", "Key locations"],
-            ].map(([value, label]) => (
-              <div key={label} className="rounded-lg border border-white/10 bg-white/5 p-4">
-                <p className="text-2xl font-bold text-white">{value}</p>
-                <p className="text-xs text-white/60">{label}</p>
-              </div>
-            ))}
-          </div>
+          <p className="mt-8 text-sm text-white/70">
+            Sign in to view current monitored locations and active alerts.
+          </p>
         </div>
         <p className="text-xs text-white/40">
           Smarter Insights. Safer Communities. A Resilient North East.
@@ -266,6 +272,21 @@ function AuthPage() {
                       onChange={(e) => setSignupEmail(e.target.value)}
                       placeholder="you@department.gov.in"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Mobile number</Label>
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      autoComplete="tel"
+                      required
+                      value={signupPhone}
+                      onChange={(e) => setSignupPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Include your country code. This is for alerts, not login.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>

@@ -21,7 +21,9 @@ import { useState, type ReactNode } from "react";
 
 import { useLocationSelection } from "@/hooks/use-location-selection";
 import { supabase } from "@/integrations/supabase/client";
+import { getAlerts } from "@/lib/api/alerts";
 import { getLocations } from "@/lib/api/locations";
+import { clearLocalDemoSession } from "@/lib/demo-auth";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,10 +112,16 @@ export function AppShell({
     queryFn: () => getLocations(search),
     enabled: Boolean(search.trim()),
   });
+  const { data: alerts = [] } = useQuery({
+    queryKey: ["backend_alerts"],
+    queryFn: () => getAlerts(),
+  });
+  const hasActiveAlerts = alerts.some((alert) => alert.status === "ACTIVE");
 
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
+    clearLocalDemoSession();
     await supabase.auth.signOut();
     navigate({ to: "/", replace: true });
   }
@@ -224,7 +232,9 @@ export function AppShell({
                 aria-label="Alerts"
               >
                 <Bell className="h-5 w-5" />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-risk-critical" />
+                {hasActiveAlerts && (
+                  <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-risk-critical" />
+                )}
               </Link>
               <div className="flex items-center gap-2">
                 <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">

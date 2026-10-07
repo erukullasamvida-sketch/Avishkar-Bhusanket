@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlmodel import SQLModel, Field
 
@@ -19,7 +19,7 @@ class Alert(SQLModel, table=True):
     risk_record_id: Optional[int] = None
 
     created_at: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=lambda: datetime.now(timezone.utc)
     )
 
     acknowledged_at: Optional[datetime] = None

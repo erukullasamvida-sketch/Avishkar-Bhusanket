@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
@@ -91,10 +91,10 @@ def _transition_alert(
             )
         if alert.status == "ACTIVE":
             alert.status = target_status
-            alert.acknowledged_at = datetime.utcnow()
+            alert.acknowledged_at = datetime.now(timezone.utc)
     elif alert.status != "RESOLVED":
         alert.status = "RESOLVED"
-        alert.resolved_at = datetime.utcnow()
+        alert.resolved_at = datetime.now(timezone.utc)
 
     session.add(alert)
     session.commit()
