@@ -1,0 +1,25 @@
+{
+  "location_match": "Exact case-insensitive match on location_name and district",
+  "events": [
+    {
+      "event_id": "guwahati-nizarapar-2022-06-14",
+      "location_name": "Guwahati",
+      "event_date": "2022-06-14",
+      "district": "Kamrup Metropolitan",
+      "description": "A landslide struck the Nizarapar area near Boragaon in Guwahati after heavy rain.",
+      "reported_impact": "Four people were killed; the report identifies them as daily wage labourers.",
+      "source_name": "India Today",
+      "source_url": "https://www.indiatoday.in/cities/guwahati/story/guwahati-news-landslide-nizarapar-heavy-rains-waterlogging-1962159-2022-06-14"
+    },
+    {
+      "event_id": "aizawl-cyclone-remal-2024-05-28",
+      "location_name": "Aizawl",
+      "event_date": "2024-05-28",
+      "district": "Aizawl",
+      "description": "Landslides during Cyclone Remal caused fatalities and property damage in Aizawl city, including Melthum, Hlimen, Falkawn, and Salem Veng.",
+      "reported_impact": "The state report counted 14 deceased at Melthum as of 7 p.m. and reported damage to electric lines and water pumps.",
+      "source_name": "Government of Mizoram, Department of Information and Public Relations",
+      "source_url": "https://dipr.mizoram.gov.in/post/cyclone-remal-claims-27-lives-in-aizawl-district-landslides-and-floods-cause-damage-to-public-infrastructure"
+    }
+  ]
+}

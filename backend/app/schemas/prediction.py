@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 from pydantic import BaseModel, Field
 
@@ -14,6 +14,24 @@ class PredictionRequest(BaseModel):
     elevation: float
     ndvi: float
     historical_events: int
+
+
+SearchablePredictionFeature = Literal[
+    "rainfall_24h",
+    "soil_moisture",
+    "slope",
+    "elevation",
+    "ndvi",
+]
+
+
+class ScenarioSearchRequest(BaseModel):
+    location_id: int = Field(gt=0)
+    target_class: Literal["moderate", "high", "critical"]
+    selected_features: List[SearchablePredictionFeature] = Field(
+        min_length=1,
+        max_length=5,
+    )
 
 
 class PredictionResponse(BaseModel):

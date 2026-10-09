@@ -23,6 +23,7 @@ from .routers import (
     sensors,
     environmental,
     locations,
+    historical_events,
 )
 
 
@@ -117,3 +118,4 @@ app.include_router(analytics.router, dependencies=api_dependencies)
 app.include_router(sensors.router, dependencies=api_dependencies)
 app.include_router(environmental.router, dependencies=api_dependencies)
 app.include_router(locations.router, dependencies=api_dependencies)
+app.include_router(historical_events.router, dependencies=api_dependencies)

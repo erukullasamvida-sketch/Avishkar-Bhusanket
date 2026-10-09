@@ -3,11 +3,12 @@ from sqlmodel import Session
 
 from ..auth import AuthenticatedUser, require_supabase_auth
 from ..database import get_session
-from ..schemas.prediction import PredictionRequest, PredictionResponse
+from ..schemas.prediction import PredictionRequest, ScenarioSearchRequest
 from ..ml.predict import model, predict_risk
 from ..services.feature_preparation import prepare_features
 from ..services.prediction_service import predict_location_risk
 from ..services.risk_engine import get_feature_importance
+from ..services.scenario_search import search_higher_risk_scenarios
 
 
 router = APIRouter(
@@ -26,6 +27,26 @@ def create_prediction(
     )
 
     return result
+
+
+@router.post("/scenario-search")
+def search_prediction_scenarios(
+    data: ScenarioSearchRequest,
+    session: Session = Depends(get_session),
+):
+    try:
+        prepared = prepare_features(data.location_id, session)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    try:
+        return search_higher_risk_scenarios(
+            prepared["features"],
+            data.selected_features,
+            data.target_class,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/feature-importance")

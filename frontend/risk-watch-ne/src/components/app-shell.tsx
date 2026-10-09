@@ -32,7 +32,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/risk-map", label: "Risk Map", icon: Map },
   { to: "/prediction", label: "AI Prediction", icon: Brain },
-  { to: "/what-if", label: "What-If Simulator", icon: SlidersHorizontal },
+  { to: "/what-if", label: "RiskPulse AI", icon: SlidersHorizontal },
   { to: "/alerts", label: "Alerts", icon: Bell },
   { to: "/analytics", label: "Reports", icon: BarChart3 },
   { to: "/field-reports", label: "Field Reports", icon: FileText },
@@ -147,11 +147,7 @@ export function AppShell({
       {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-navy/60"
-            onClick={() => setOpen(false)}
-            aria-hidden
-          />
+          <div className="absolute inset-0 bg-navy/60" onClick={() => setOpen(false)} aria-hidden />
           <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-sidebar">
             <div className="flex items-center justify-between">
               <Brand />
@@ -316,9 +312,7 @@ export function SectionCard({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-4 py-3">
           <div className="min-w-0">
             {title && <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>}
-            {description && (
-              <p className="truncate text-xs text-muted-foreground">{description}</p>
-            )}
+            {description && <p className="truncate text-xs text-muted-foreground">{description}</p>}
           </div>
           {actions && <div className="shrink-0">{actions}</div>}
         </div>

@@ -21,11 +21,12 @@ def predict_risk(data: dict):
 
     X = pd.DataFrame([data])[FEATURES]
 
-    prediction = model.predict(X)[0]
-
     probabilities = model.predict_proba(X)[0]
 
     classes = model.classes_
+    prediction = classes[
+        max(range(len(probabilities)), key=probabilities.__getitem__)
+    ]
 
     probability_map = {
         cls: float(prob)

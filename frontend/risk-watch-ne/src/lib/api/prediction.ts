@@ -20,6 +20,28 @@ export type ModelPrediction = {
 
 export type StatelessPredictionResponse = ModelPrediction;
 
+export type SearchablePredictionFeature = Exclude<keyof PredictionFeatures, "historical_events">;
+export type TargetRiskClass = "moderate" | "high" | "critical";
+
+export type HigherRiskScenario = {
+  changed_feature: SearchablePredictionFeature;
+  features: PredictionFeatures;
+  prediction: ModelPrediction;
+};
+
+export type HigherRiskScenarioSearchResponse = {
+  baseline: PredictionFeatures;
+  baseline_prediction: ModelPrediction;
+  target_class: TargetRiskClass;
+  scenario: HigherRiskScenario | null;
+  target_is_higher: boolean;
+  evaluated_candidates: number;
+  candidate_limit: number;
+  search_bounds: Partial<
+    Record<SearchablePredictionFeature, { min: number; max: number; step: number }>
+  >;
+};
+
 export type PreparedPredictionFeatures = {
   location_id: number;
   observation_id: number;
@@ -52,9 +74,7 @@ export type PredictionResponse = {
   alert_reused: boolean;
 };
 
-export async function runActualPrediction(
-  locationId: number,
-): Promise<PredictionResponse> {
+export async function runActualPrediction(locationId: number): Promise<PredictionResponse> {
   return apiFetch<PredictionResponse>(`/api/predictions/${locationId}/run`, {
     method: "POST",
   });
@@ -63,17 +83,28 @@ export async function runActualPrediction(
 export async function getPreparedPredictionFeatures(
   locationId: number,
 ): Promise<PreparedPredictionFeatures> {
-  return apiFetch<PreparedPredictionFeatures>(
-    `/api/predictions/features/${locationId}`,
-  );
+  return apiFetch<PreparedPredictionFeatures>(`/api/predictions/features/${locationId}`);
 }
 
-export async function predictScenario(
-  features: PredictionFeatures,
-): Promise<ModelPrediction> {
+export async function predictScenario(features: PredictionFeatures): Promise<ModelPrediction> {
   return apiFetch<ModelPrediction>("/api/predictions", {
     method: "POST",
     body: JSON.stringify(features),
+  });
+}
+
+export async function searchHigherRiskScenarios(
+  locationId: number,
+  selectedFeatures: SearchablePredictionFeature[],
+  targetClass: TargetRiskClass,
+): Promise<HigherRiskScenarioSearchResponse> {
+  return apiFetch<HigherRiskScenarioSearchResponse>("/api/predictions/scenario-search", {
+    method: "POST",
+    body: JSON.stringify({
+      location_id: locationId,
+      selected_features: selectedFeatures,
+      target_class: targetClass,
+    }),
   });
 }
 
